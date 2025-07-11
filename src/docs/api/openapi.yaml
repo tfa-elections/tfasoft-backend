@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: TFASOFT Public API
+  version: 1.0.0
+  description: Full REST API for TFASOFT modules including results, media, polling structure, aggregation, and review.
+servers:
+  - url: https://api.tfasoft.org/api/v1
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200': { description: JWT token returned }
+        '401': { description: Unauthorized }
+
+  /auth/register:
+    post:
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password, deviceId, pollingStationCode]
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                deviceId:
+                  type: string
+                pollingStationCode:
+                  type: string
+      responses:
+        '201': { description: User registered }
+
+  /result/submit:
+    post:
+      summary: Submit results
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pollingStationCode, resultsPerCandidate]
+              properties:
+                pollingStationCode:
+                  type: string
+                resultsPerCandidate:
+                  type: object
+      responses:
+        '201': { description: Submitted }
+
+  /result/consensus:
+    get:
+      summary: Get consensus
+      parameters:
+        - name: pollingStationCode
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200': { description: Consensus status }
+
+  /result/submissionStatus:
+    get:
+      summary: Get submission status
+      security: [bearerAuth: []]
+      responses:
+        '200': { description: User submission status }
+
+  /media/upload:
+    post:
+      summary: Upload media files
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                type:
+                  type: string
+      responses:
+        '201': { description: Files uploaded }
+
+  /media/registerPendingUpload:
+    post:
+      summary: Register pending upload
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                localMediaId:
+                  type: string
+                type:
+                  type: string
+      responses:
+        '201': { description: Metadata registered }
+
+  /media/completePendingUpload:
+    post:
+      summary: Complete pending upload
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                localMediaId:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200': { description: Upload completed }
+
+  /polling/regions:
+    get:
+      summary: List regions
+      responses:
+        '200': { description: Region list }
+
+  /polling/divisions:
+    get:
+      summary: List divisions by region
+      parameters:
+        - name: region
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200': { description: Division list }
+
+  /polling/subdivisions:
+    get:
+      summary: List subdivisions by division
+      parameters:
+        - name: region
+          in: query
+          required: true
+        - name: division
+          in: query
+          required: true
+      responses:
+        '200': { description: Subdivision list }
+
+  /polling/centers:
+    get:
+      summary: List centers
+      parameters:
+        - name: region
+          in: query
+          required: true
+        - name: division
+          in: query
+          required: true
+        - name: subdivision
+          in: query
+          required: true
+      responses:
+        '200': { description: Center list }
+
+  /polling/stations:
+    get:
+      summary: List polling stations by center
+      parameters:
+        - name: centerCode
+          in: query
+          required: true
+      responses:
+        '200': { description: Polling stations }
+
+  /aggregation/summary:
+    get:
+      summary: Get aggregation summary
+      parameters:
+        - name: region
+          in: query
+        - name: division
+          in: query
+        - name: subdivision
+          in: query
+        - name: centerCode
+          in: query
+      responses:
+        '200': { description: Summary by zone }
+
+  /aggregation/others:
+    get:
+      summary: Get breakdown of other candidates
+      parameters:
+        - name: region
+          in: query
+        - name: division
+          in: query
+        - name: subdivision
+          in: query
+        - name: centerCode
+          in: query
+      responses:
+        '200': { description: Other candidates }
+
+  /review/submitSuspicion:
+    post:
+      summary: Submit suspicion report
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, resultId]
+              properties:
+                reason:
+                  type: string
+                resultId:
+                  type: integer
+      responses:
+        '201': { description: Suspicion recorded }
+
+  /review/markAsRejectionCandidate:
+    post:
+      summary: Admin marks as rejection candidate
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resultId]
+              properties:
+                resultId:
+                  type: integer
+      responses:
+        '200': { description: Marked }
+
+  /review/markAsRemovable:
+    post:
+      summary: Admin-level-2 marks as removable
+      security: [bearerAuth: []]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resultId]
+              properties:
+                resultId:
+                  type: integer
+      responses:
+        '200': { description: Marked }
+
+  /audit:
+    get:
+      summary: View audit logs of result submissions
+      security: [ bearerAuth: [] ]
+      parameters:
+        - name: pollingStationCode
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of audit logs
+        '403':
+          description: Forbidden — user must have ADMIN_LEVEL_1, ADMIN_LEVEL_2, or AUDITOR role
+
+  /consensus/agreement:
+    get:
+      summary: Get agreement report for a polling station
+      parameters:
+        - name: pollingStationCode
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Consensus agreement report per candidate
+        '400':
+          description: Missing polling station code
+
+  /consensus/submissions:
+    get:
+      summary: List all submissions and deltas from consensus
+      parameters:
+        - name: pollingStationCode
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of result submissions with deltas from consensus
+        '400':
+          description: Missing polling station code
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
